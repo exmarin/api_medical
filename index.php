@@ -2,8 +2,9 @@
 // Cargar los archivos necesarios
 require_once 'config/database.php';
 require_once 'controllers/AuthController.php';
-// require_once 'controllers/AppointmentController.php';
-// require_once 'controllers/PaymentController.php';
+require_once 'controllers/AppointmentController.php';  // Asegúrate de incluir el controlador de citas
+//require_once 'controllers/PaymentController.php'; 
+require_once 'utils/AuthMiddleware.php';  
 
 // Establecer el tipo de contenido
 header('Content-Type: application/json');
@@ -30,6 +31,36 @@ if ($conn) {
         $data = json_decode(file_get_contents("php://input"));
         $authController = new AuthController($conn);
         $authController->login($data);
+
+    } else if ($method === 'POST' && $endpoint === 'appointments') {
+        // Verifica que el token esté presente y que el usuario esté autenticado
+        $token = $_GET['token'] ?? null;
+        $authMiddleware = new AuthMiddleware($conn);
+        $user = $authMiddleware->authenticate($token); // Esto debería retornar el usuario autenticado
+
+        if ($user) {
+            // Crear cita (usamos AppointmentController)
+            $data = json_decode(file_get_contents("php://input"));
+            $appointmentController = new AppointmentController($conn, $user); // Pasamos el objeto usuario aquí
+            $appointmentController->createAppointment($data);
+        } else {
+            echo json_encode(['message' => 'Unauthorized']);
+        }
+
+    } else if ($method === 'GET' && $endpoint === 'appointments') {
+        // Verifica que el token esté presente y que el usuario esté autenticado
+        $token = $_GET['token'] ?? null;
+        $authMiddleware = new AuthMiddleware($conn);
+        $user = $authMiddleware->authenticate($token); // Esto debería retornar el usuario autenticado
+
+        if ($user) {
+            // Ver citas (usamos AppointmentController)
+            $appointmentController = new AppointmentController($conn, $user); // Pasamos el objeto usuario aquí
+            $appointmentController->getAppointments();
+        } else {
+            echo json_encode(['message' => 'Unauthorized']);
+        }
+
     } else {
         // Si no se encuentra el endpoint
         echo json_encode(['message' => '🚀 La API está funcionando. Endpoint no encontrado.']);

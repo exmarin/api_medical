@@ -29,6 +29,12 @@ class AuthController {
         $query = 'INSERT INTO users (name, email, password, role) VALUES (:name, :email, :password, :role)';
         $stmt = $this->db->prepare($query);
     
+        // Verificación de si el query fue preparado correctamente
+        if ($stmt === false) {
+            echo json_encode(['message' => 'Failed to prepare the statement']);
+            return;
+        }
+    
         // Hashear la contraseña
         $hashed_password = password_hash($data->password, PASSWORD_BCRYPT);
         $stmt->bindParam(':name', $data->name);
@@ -36,6 +42,12 @@ class AuthController {
         $stmt->bindParam(':password', $hashed_password);
         $stmt->bindParam(':role', $data->role);
     
+        // Ejecutar la inserción
+        if ($stmt->execute()) {
+            echo json_encode(['message' => 'User registered successfully']);
+        } else {
+            echo json_encode(['message' => 'Failed to register user']);
+        }
     }
 
     // Login de usuario
