@@ -40,34 +40,40 @@ class AuthController {
 
     // Login de usuario
     public function login($data) {
+        // Verificar si el email y la contraseña están presentes
         if (empty($data->email) || empty($data->password)) {
             echo json_encode(['message' => 'Email and password are required']);
             return;
         }
-
+    
+        // Consultar si el usuario existe en la base de datos
         $query = 'SELECT * FROM users WHERE email = :email';
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(':email', $data->email);
         $stmt->execute();
-
+    
+        // Verificar si no se encontró al usuario
         if ($stmt->rowCount() === 0) {
             echo json_encode(['message' => 'Invalid credentials']);
             return;
         }
-
+    
+        // Recuperar los datos del usuario
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
+    
+        // Verificar si la contraseña es correcta
         if (password_verify($data->password, $user['password'])) {
-            // Generar token (simulando con bin2hex)
+            // Generar el token (usamos bin2hex para generar un token simulado)
             $token = bin2hex(random_bytes(32));
-
-            // Guardar el token en la base de datos
+    
+            // Actualizar el token del usuario en la base de datos
             $query = 'UPDATE users SET token = :token WHERE id = :id';
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(':token', $token);
             $stmt->bindParam(':id', $user['id']);
             $stmt->execute();
-
+    
+            // Devolver el mensaje de éxito y los datos del usuario
             echo json_encode([
                 'message' => 'Login successful',
                 'user' => [
@@ -79,6 +85,7 @@ class AuthController {
                 ]
             ]);
         } else {
+            // Si las credenciales son incorrectas
             echo json_encode(['message' => 'Invalid credentials']);
         }
     }
