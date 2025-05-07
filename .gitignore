@@ -1,0 +1,9 @@
+# Ignorar dependencias de Composer
+/vendor/
+
+# Ignorar archivos de entorno (si usas .env)
+.env
+
+# Ignorar archivos temporales y logs
+*.log
+*.tmp
