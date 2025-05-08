@@ -20,7 +20,7 @@ $endpoint = $_GET['endpoint'] ?? '';
 if ($conn) {
     // Conexión exitosa, proceder a las rutas
     if ($method === 'POST' && $endpoint === 'register') {
-        // Registro de usuario (usamos AuthController)
+        // Registro de usuario
         $data = json_decode(file_get_contents("php://input"));
         $authController = new AuthController($conn);
         $authController->register($data);

@@ -16,19 +16,25 @@ class AuthController
             echo json_encode(['message' => 'El nombre es requerido.']);
             return;
         }
-        
+
         if (empty($data->email)) {
             echo json_encode(['message' => 'El correo electrónico es requerido.']);
             return;
         }
-        
+
         if (empty($data->password)) {
             echo json_encode(['message' => 'La contraseña es requerida.']);
             return;
         }
-        
+
         if (empty($data->role)) {
             echo json_encode(['message' => 'El rol es requerido.']);
+            return;
+        }
+
+        // Validación de la contraseña (debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial)
+        if (!preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,}$/', $data->password)) {
+            echo json_encode(['message' => 'La contraseña debe tener al menos 8 caracteres, una letra mayúscula, un número y un carácter especial.']);
             return;
         }
 
@@ -70,11 +76,11 @@ class AuthController
     public function login($data)
     {
         // Verificar si el email y la contraseña están presentes
-        if(empty($data->email)) {
+        if (empty($data->email)) {
             echo json_encode(['message' => 'El email es obligatorio.']);
             return;
         }
-        if(empty($data->password)) {
+        if (empty($data->password)) {
             echo json_encode(['message' => 'La contraseña es obligatoria.']);
             return;
         }
