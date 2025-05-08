@@ -38,7 +38,7 @@ if ($conn) {
         if ($user) {
             // Crear cita (usamos AppointmentController)
             $data = json_decode(file_get_contents("php://input"));
-            $appointmentController = new AppointmentController($conn, $user); // Pasamos el objeto usuario aquí
+            $appointmentController = new AppointmentController($conn, $user); 
             $appointmentController->createAppointment($data);
         } else {
             echo json_encode(['message' => 'Unauthorized']);
@@ -51,7 +51,7 @@ if ($conn) {
 
         if ($user) {
             // Ver citas (usamos AppointmentController)
-            $appointmentController = new AppointmentController($conn, $user); // Pasamos el objeto usuario aquí
+            $appointmentController = new AppointmentController($conn, $user); 
             $appointmentController->getAppointments();
         } else {
             echo json_encode(['message' => 'Unauthorized']);
