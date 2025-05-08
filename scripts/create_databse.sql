@@ -38,5 +38,5 @@ CREATE TABLE IF NOT EXISTS payments (
     FOREIGN KEY (appointment_id) REFERENCES appointments(id)
 );
 
--- Comentar aquí si se necesitan índices adicionales u optimizaciones
+
 
