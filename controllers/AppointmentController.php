@@ -14,6 +14,12 @@ class AppointmentController
     // Crear una cita
     public function createAppointment($data)
     {
+        // Verificar que el rol del usuario sea paciente
+        if ($this->user['role'] !== 'paciente') {
+            echo json_encode(['message' => 'Solo los pacientes pueden crear citas']);
+            return;
+        }
+
         // Verificar que la cita tenga fecha y hora
         if (empty($data->appointment_date) || empty($data->appointment_time)) {
             echo json_encode(['message' => 'Debe proporcionar la fecha y hora de la cita']);
@@ -33,6 +39,16 @@ class AppointmentController
             return;
         }
 
+        // Verificar si el doctor existe
+        $query = 'SELECT * FROM users WHERE id = :doctor_id AND role = "doctor"';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':doctor_id', $data->doctor_id);
+        $stmt->execute();
+
+        if ($stmt->rowCount() === 0) {
+            echo json_encode(['message' => 'El doctor no existe']);
+            return;
+        }
 
         // Verificar que la cita no esté ocupada
         $query = 'SELECT * FROM appointments WHERE doctor_id = :doctor_id AND appointment_date = :appointment_date AND appointment_time = :appointment_time';
@@ -58,18 +74,20 @@ class AppointmentController
             return;
         }
 
+        // Fecha de la cita: convertirla al formato Y-m-d para almacenarla en la base de datos
+        $appointment_date = DateTime::createFromFormat('d-m-Y', $data->appointment_date);
+        $formatted_date = $appointment_date->format('Y-m-d'); // Almacenamos en formato Y-m-d
+
         $status = 'pendiente'; // Estado por defecto de la cita
 
-        $appointment_date = DateTime::createFromFormat('d-m-Y', $data->appointment_date);
-        $formatted_date = $appointment_date->format('Y-m-d');
-
         // Insertar la cita en la base de datos
-        $query = 'INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, status) VALUES (:patient_id, :doctor_id, :appointment_date, :appointment_time, :status)';
+        $query = 'INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, status) 
+              VALUES (:patient_id, :doctor_id, :appointment_date, :appointment_time, :status)';
         $stmt = $this->db->prepare($query);
 
         $stmt->bindParam(':patient_id', $this->user['id']);
         $stmt->bindParam(':doctor_id', $data->doctor_id);
-        $stmt->bindParam(':appointment_date', $formatted_date);
+        $stmt->bindParam(':appointment_date', $formatted_date); // Usamos la fecha formateada en Y-m-d
         $stmt->bindParam(':appointment_time', $data->appointment_time);
         $stmt->bindParam(':status', $status);
 
@@ -82,10 +100,11 @@ class AppointmentController
             $stmt_doctor->execute();
             $doctor = $stmt_doctor->fetch(PDO::FETCH_ASSOC);
 
-            $time = substr($data->appointment_time, 0, 5);
-            $formatted_date = $appointment_date->format('d-m-Y');
+            // Formatear la hora para que se muestre como HH:MM
+            $time = substr($data->appointment_time, 0, 5); // Solo la hora y minutos
+            $formatted_date = $appointment_date->format('d-m-Y'); // Mostrar la fecha en formato d-m-Y
 
-            // Incluir el nombre del doctor y la fecha solicitada en el mensaje
+            // Mostrar el mensaje de éxito con los datos del doctor y la cita
             echo json_encode([
                 'message' => 'La cita ha sido creada con éxito con el doctor ' . $doctor['name'] . ' para el día ' . $formatted_date . ' a la hora ' . $time
             ]);
@@ -94,7 +113,7 @@ class AppointmentController
         }
     }
 
-    // Ver las citas de un usuario
+
     // Ver las citas de un usuario
     public function getAppointments()
     {
