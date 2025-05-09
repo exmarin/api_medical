@@ -3,13 +3,14 @@
 require_once '../config/database.php';
 require_once '../controllers/AuthController.php';
 require_once '../controllers/AppointmentController.php';
+require_once '../controllers/PaymentController.php';
 require_once '../utils/AuthMiddleware.php';
 
 // Establecer el tipo de contenido
 header('Content-Type: application/json');
 
 // Inicializar la conexión con la base de datos
-$database = new Database();
+$database = Database::getInstance();
 $conn = $database->connect();
 
 // Capturar el método HTTP y el endpoint
@@ -94,6 +95,20 @@ if ($conn) {
             $data = json_decode(file_get_contents("php://input"));
             $appointmentController = new AppointmentController($conn, $user);
             $appointmentController->cancelAppointment($data);
+        } else {
+            echo json_encode(['message' => 'Unauthorized']);
+        }
+    } else if ($method === 'POST' && $endpoint === 'payments') {
+        // Verifica que el token esté presente y que el usuario esté autenticado
+        $token = $_GET['token'] ?? null;
+        $authMiddleware = new AuthMiddleware($conn);
+        $user = $authMiddleware->authenticate($token);
+
+        if ($user) {
+            // Procesar pago (usamos PaymentController)
+            $data = json_decode(file_get_contents("php://input"));
+            $paymentController = new PaymentController($conn, $user);
+            $paymentController->createPayment($data);
         } else {
             echo json_encode(['message' => 'Unauthorized']);
         }
