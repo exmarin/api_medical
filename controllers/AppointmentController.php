@@ -82,7 +82,7 @@ class AppointmentController
 
         // Insertar la cita en la base de datos
         $query = 'INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, status) 
-              VALUES (:patient_id, :doctor_id, :appointment_date, :appointment_time, :status)';
+          VALUES (:patient_id, :doctor_id, :appointment_date, :appointment_time, :status)';
         $stmt = $this->db->prepare($query);
 
         $stmt->bindParam(':patient_id', $this->user['id']);
@@ -169,5 +169,119 @@ class AppointmentController
         } else {
             echo json_encode(['message' => 'No tienes citas programadas para hoy']);
         }
+    }
+
+    // Confirmar o rechazar cita
+    public function confirmOrRejectAppointment($data)
+    {
+        // Verificar que el rol del usuario sea doctor
+        if ($this->user['role'] !== 'doctor') {
+            echo json_encode(['message' => 'Solo los médicos pueden confirmar o rechazar citas']);
+            return;
+        }
+
+        // Verificar que la cita exista, su estado sea "pendiente" y que haya sido pagada
+        $query = 'SELECT a.*, p.status AS payment_status 
+              FROM appointments a 
+              LEFT JOIN payments p ON a.id = p.appointment_id 
+              WHERE a.id = :appointment_id AND a.doctor_id = :doctor_id';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':appointment_id', $data->appointment_id);
+        $stmt->bindParam(':doctor_id', $this->user['id']);
+        $stmt->execute();
+
+        if ($stmt->rowCount() === 0) {
+            echo json_encode(['message' => 'La cita no existe o no está asociada a este doctor']);
+            return;
+        }
+
+        // Recuperamos la información de la cita
+        $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Si el pago no fue realizado, la cita no puede ser confirmada ni rechazada
+        if ($appointment['payment_status'] !== 'pagado' && $data->status === 'confirmada') {
+            echo json_encode(['message' => 'La cita no puede ser confirmada porque no ha sido pagada']);
+            return;
+        }
+
+        // Validar que el estado proporcionado sea válido (confirmada o rechazada)
+        $status = $data->status;
+        if ($status !== 'confirmada' && $status !== 'rechazada') {
+            echo json_encode(['message' => 'El estado proporcionado no es válido. Debe ser "confirmada" o "rechazada"']);
+            return;
+        }
+
+        // Actualizar el estado de la cita
+        $query = 'UPDATE appointments SET status = :status WHERE id = :appointment_id';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':status', $status);
+        $stmt->bindParam(':appointment_id', $data->appointment_id);
+        $stmt->execute();
+
+        // Obtener el estado actualizado de la cita
+        $query = 'SELECT status FROM appointments WHERE id = :appointment_id';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':appointment_id', $data->appointment_id);
+        $stmt->execute();
+        $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'message' => 'Cita ' . $status . ' con éxito'
+        ]);
+    }
+
+    // Cancelar una cita por fecha y hora
+    public function cancelAppointment($data)
+    {
+        // Verificar que el rol del usuario sea paciente
+        if ($this->user['role'] !== 'paciente') {
+            echo json_encode(['message' => 'Solo los pacientes pueden cancelar citas']);
+            return;
+        }
+
+        // Verificar que la fecha y hora de la cita sean proporcionadas
+        if (empty($data->appointment_date) || empty($data->appointment_time)) {
+            echo json_encode(['message' => 'Debe proporcionar la fecha y hora de la cita']);
+            return;
+        }
+
+        // Convertir la fecha proporcionada al formato correcto (Y-m-d)
+        $appointment_date = DateTime::createFromFormat('d-m-Y', $data->appointment_date);
+        $formatted_date = $appointment_date->format('Y-m-d'); // Convertimos la fecha al formato Y-m-d
+
+        // Verificar que la cita exista y esté asociada al paciente
+        $query = 'SELECT * FROM appointments WHERE patient_id = :patient_id AND appointment_date = :appointment_date AND appointment_time = :appointment_time AND status = "pendiente"';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':patient_id', $this->user['id']);
+        $stmt->bindParam(':appointment_date', $formatted_date);
+        $stmt->bindParam(':appointment_time', $data->appointment_time);
+        $stmt->execute();
+
+        if ($stmt->rowCount() === 0) {
+            echo json_encode(['message' => 'La cita no existe o ya está confirmada/rechazada']);
+            return;
+        }
+
+        // Recuperar la información de la cita
+        $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Verificar que la cita esté en el futuro
+        $appointment_date = new DateTime($appointment['appointment_date']);
+        $current_date = new DateTime();
+
+        if ($appointment_date < $current_date) {
+            echo json_encode(['message' => 'No se puede cancelar una cita pasada']);
+            return;
+        }
+
+        // Actualizar el estado de la cita a "cancelada"
+        $status = 'cancelada';
+        $query = 'UPDATE appointments SET status = :status WHERE id = :appointment_id';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':status', $status);
+        $stmt->bindParam(':appointment_id', $appointment['id']);
+        $stmt->execute();
+
+        echo json_encode(['message' => 'Cita cancelada con éxito']);
     }
 }

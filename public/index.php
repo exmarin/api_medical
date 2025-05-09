@@ -33,12 +33,12 @@ if ($conn) {
         // Verifica que el token esté presente y que el usuario esté autenticado
         $token = $_GET['token'] ?? null;
         $authMiddleware = new AuthMiddleware($conn); // Instanciamos el middleware
-        $user = $authMiddleware->authenticate($token); // Esto debería retornar el usuario autenticado
+        $user = $authMiddleware->authenticate($token);
 
         if ($user) {
             // Crear cita (usamos AppointmentController)
             $data = json_decode(file_get_contents("php://input"));
-            $appointmentController = new AppointmentController($conn, $user); 
+            $appointmentController = new AppointmentController($conn, $user);
             $appointmentController->createAppointment($data);
         } else {
             echo json_encode(['message' => 'Unauthorized']);
@@ -47,11 +47,11 @@ if ($conn) {
         // Verifica que el token esté presente y que el usuario esté autenticado
         $token = $_GET['token'] ?? null;
         $authMiddleware = new AuthMiddleware($conn); // Instanciamos el middleware
-        $user = $authMiddleware->authenticate($token); // Esto debería retornar el usuario autenticado
+        $user = $authMiddleware->authenticate($token);
 
         if ($user) {
             // Ver citas (usamos AppointmentController)
-            $appointmentController = new AppointmentController($conn, $user); 
+            $appointmentController = new AppointmentController($conn, $user);
             $appointmentController->getAppointments();
         } else {
             echo json_encode(['message' => 'Unauthorized']);
@@ -60,12 +60,40 @@ if ($conn) {
         // Verifica que el token esté presente y que el usuario esté autenticado
         $token = $_GET['token'] ?? null;
         $authMiddleware = new AuthMiddleware($conn);
-        $user = $authMiddleware->authenticate($token); // Esto debería retornar el usuario autenticado
+        $user = $authMiddleware->authenticate($token);
 
         if ($user) {
             // Listar citas del día (usamos AppointmentController)
             $appointmentController = new AppointmentController($conn, $user);
             $appointmentController->getTodaysAppointments();
+        } else {
+            echo json_encode(['message' => 'Unauthorized']);
+        }
+    } else if ($method === 'POST' && $endpoint === 'appointments/confirmOrReject') {
+        // Verifica que el token esté presente y que el usuario esté autenticado
+        $token = $_GET['token'] ?? null;
+        $authMiddleware = new AuthMiddleware($conn);
+        $user = $authMiddleware->authenticate($token);
+
+        if ($user) {
+            // Confirmar o rechazar cita (usamos AppointmentController)
+            $data = json_decode(file_get_contents("php://input"));
+            $appointmentController = new AppointmentController($conn, $user);
+            $appointmentController->confirmOrRejectAppointment($data);
+        } else {
+            echo json_encode(['message' => 'Unauthorized']);
+        }
+    } else if ($method === 'POST' && $endpoint === 'appointments/cancel') {
+        // Verifica que el token esté presente y que el usuario esté autenticado
+        $token = $_GET['token'] ?? null;
+        $authMiddleware = new AuthMiddleware($conn); // Instanciamos el middleware
+        $user = $authMiddleware->authenticate($token); // Esto debería retornar el usuario autenticado
+
+        if ($user) {
+            // Cancelar cita (usamos AppointmentController)
+            $data = json_decode(file_get_contents("php://input"));
+            $appointmentController = new AppointmentController($conn, $user);
+            $appointmentController->cancelAppointment($data);
         } else {
             echo json_encode(['message' => 'Unauthorized']);
         }
